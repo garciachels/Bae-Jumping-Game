@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Shanae aka Bae 💖</title>
+
+<style>
+  /* =========================
+     GLOBAL PAGE STYLES
+     ========================= */
+  body {
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+  }
+
+  h1 {
+    margin-bottom: 5px;
+  }
+
+  #score, #highScore {
+    font-size: 18px;
+    margin: 4px 0;
+  }
+
+  /* =========================
+     GAME CONTAINER
+     ========================= */
+  #game {
+    width: 90%;
+    max-width: 600px;
+    height: 220px;
+    background: #222;
+    margin: 20px auto;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid white;
+
+    /* Improves mobile tap behavior */
+    touch-action: manipulation;
+  }
+
+  /* =========================
+     ❤️ HEART PLAYER
+     ========================= */
+  #player {
+    width: 40px;
+    height: 40px;
+    position: absolute;
+
+    /* Start the player closer to the center for fair gameplay */
+    left: 280px;
+    bottom: 0;
+
+    background: red;
+    transform: rotate(-45deg);
+    transition: transform 0.1s;
+  }
+
+  /* Heart shape using CSS pseudo-elements */
+  #player::before,
+  #player::after {
+    content: "";
+    width: 40px;
+    height: 40px;
+    background: red;
+    border-radius: 50%;
+    position: absolute;
+  }
+
+  #player::before {
+    top: -20px;
+    left: 0;
+  }
+
+  #player::after {
+    left: 20px;
+    top: 0;
+  }
+
+  /* =========================
+     💕 HEART PULSE (ON JUMP)
+     ========================= */
+  .pulse {
+    animation: pulse 0.4s infinite alternate;
+  }
+
+  @keyframes pulse {
+    from {
+      transform: rotate(-45deg) scale(1);
+    }
+    to {
+      transform: rotate(-45deg) scale(1.15);
+    }
+  }
+
+  /* =========================
+     💀 BROKEN HEART (GAME OVER)
+     ========================= */
+  .broken {
+    animation: break 0.6s forwards;
+  }
+
+  @keyframes break {
+    to {
+      transform: rotate(-45deg) scale(0);
+      opacity: 0;
+    }
+  }
+
+  /* =========================
+     OBSTACLES
+     ========================= */
+  .obstacle {
+    width: 30px;
+    height: 45px;
+    background: #ef4444;
+    position: absolute;
+    bottom: 0;
+    right: -40px;
+  }
+
+  /* =========================
+     RESTART BUTTON
+     ========================= */
+  #restartBtn {
+    display: none;
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  #restartBtn:hover {
+    background: #dc2626;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- =========================
+     GAME HUD
+     ========================= -->
+<h1>Shanae aka Bae 💖</h1>
+<div id="score">Score: 0</div>
+<div id="highScore">High Score: 0</div>
+
+<!-- =========================
+     GAME AREA
+     ========================= -->
+<div id="game">
+  <div id="player"></div>
+</div>
+
+<!-- Restart Button (shown on game over) -->
+<button id="restartBtn">Try Again</button>
+
+<script>
+  /* =========================
+     ELEMENT REFERENCES
+     ========================= */
+  const game = document.getElementById("game");
+  const player = document.getElementById("player");
+  const scoreDisplay = document.getElementById("score");
+  const highScoreDisplay = document.getElementById("highScore");
+  const restartBtn = document.getElementById("restartBtn");
+
+  /* =========================
+     GAME STATE VARIABLES
+     ========================= */
+  let isJumping = false;
+  let position = 0;      // Player vertical position
+  let velocity = 0;      // Jump velocity
+  let gravity = 0.9;     // Gravity pull
+  let speed = 5;         // Obstacle speed
+  let score = 0;
+  let gameOver = false;
+
+  /* =========================
+     HIGH SCORE STORAGE
+     ========================= */
+  let highScore = localStorage.getItem("highScore") || 0;
+  highScoreDisplay.textContent = "High Score: " + highScore;
+
+  /* =========================
+     JUMP LOGIC
+     ========================= */
+  function jump() {
+    if (isJumping || gameOver) return;
+
+    isJumping = true;
+    velocity = 15; // Initial jump force
+    player.classList.add("pulse");
+  }
+
+  /* =========================
+     MAIN GAME LOOP
+     ========================= */
+  function update() {
+    if (gameOver) return;
+
+    // Apply gravity
+    velocity -= gravity;
+    position += velocity;
+
+    // Stop at ground level
+    if (position <= 0) {
+      position = 0;
+      isJumping = false;
+      player.classList.remove("pulse");
+    }
+
+    // Update player position
+    player.style.bottom = position + "px";
+
+    requestAnimationFrame(update);
+  }
+
+  update();
+
+  /* =========================
+     INPUT CONTROLS
+     ========================= */
+
+  // Space bar jump
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space") jump();
+  });
+
+  // Mouse click jump
+  game.addEventListener("click", jump);
+
+  // Mobile touch jump
+  game.addEventListener("touchstart", e => {
+    e.preventDefault();
+    jump();
+  });
+
+  /* =========================
+     OBSTACLE GENERATION
+     ========================= */
+  function createObstacle() {
+    if (gameOver) return;
+
+    const obstacle = document.createElement("div");
+    obstacle.classList.add("obstacle");
+    game.appendChild(obstacle);
+
+    let obstaclePos = game.clientWidth;
+
+    const move = setInterval(() => {
+      if (gameOver) {
+        clearInterval(move);
+        obstacle.remove();
+        return;
+      }
+
+      obstaclePos -= speed;
+      obstacle.style.right = obstaclePos + "px";
+
+      // Collision detection
+      const p = player.getBoundingClientRect();
+      const o = obstacle.getBoundingClientRect();
+
+      if (
+        p.right > o.left &&
+        p.left < o.right &&
+        p.bottom > o.top
+      ) {
+        endGame();
+        clearInterval(move);
+      }
+
+      // Remove obstacle after it leaves screen
+      if (obstaclePos < -40) {
+        clearInterval(move);
+        obstacle.remove();
+      }
+    }, 20);
+
+    // Increase score & difficulty
+    score++;
+    scoreDisplay.textContent = "Score: " + score;
+    speed += 0.15;
+
+    setTimeout(createObstacle, 1400);
+  }
+
+  createObstacle();
+
+  /* =========================
+     GAME OVER HANDLER
+     ========================= */
+  function endGame() {
+    gameOver = true;
+    player.classList.remove("pulse");
+    player.classList.add("broken");
+    restartBtn.style.display = "inline-block";
+
+    // Save high score
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem("highScore", highScore);
+      highScoreDisplay.textContent = "High Score: " + highScore;
+    }
+  }
+
+  /* =========================
+     RESTART GAME
+     ========================= */
+  restartBtn.addEventListener("click", () => {
+    // Remove obstacles
+    document.querySelectorAll(".obstacle").forEach(o => o.remove());
+
+    // Reset values
+    score = 0;
+    speed = 5;
+    position = 0;
+    velocity = 0;
+    gameOver = false;
+    isJumping = false;
+
+    scoreDisplay.textContent = "Score: 0";
+    player.style.bottom = "0px";
+    player.className = "";
+    restartBtn.style.display = "none";
+
+    createObstacle();
+    update();
+  });
+</script>
+
+</body>
+</html>
