@@ -1,4 +1,3 @@
-# Bae-Jumping-Game
 <!DOCTYPE html>
 <html lang="en">
 <head>
